@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P‑BOX · MMORPG</title>
+    <style>
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --glass: rgba(10, 10, 30, 0.65);
+            --neon: #0ff;
+            --neon2: #f0f;
+            --gold: #ffd700;
+            --hp: #ff3355;
+            --mp: #3399ff;
+            --st: #66ff99;
+            --xp: #ffaa00;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0a1a;
+            color: #eee;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* ===== LOADING SCREEN ===== */
+        #loading {
+            position: fixed;
+            inset: 0;
+            background: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.8s;
+        }
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #loading .spinner {
+            width: 80px;
+            height: 80px;
+            border: 6px solid rgba(0, 255, 255, 0.1);
+            border-top-color: var(--neon);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        #loading p {
+            margin-top: 20px;
+            font-family: 'Orbitron', monospace;
+            color: var(--neon);
+            letter-spacing: 4px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        @keyframes pulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+        }
+
+        /* ===== LOGIN OVERLAY ===== */
+        #loginOverlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, #141430 0%, #05050f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.6s;
+        }
+        #loginOverlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Animated background particles (canvas behind) */
+        #loginBgCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .login-box {
+            position: relative;
+            z-index: 1;
+            width: 420px;
+            max-width: 92vw;
+            padding: 40px 30px;
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 255, 255, 0.25);
+            border-radius: 32px;
+            box-shadow: 0 0 60px rgba(0, 255, 255, 0.15), inset 0 0 60px rgba(0, 255, 255, 0.05);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        .login-box:hover {
+            transform: scale(1.01);
+        }
+
+        .login-box .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--neon), var(--neon2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+            letter-spacing: 6px;
+            margin-bottom: 8px;
+        }
+        .login-box .subtitle {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+            letter-spacing: 8px;
+            margin-bottom: 28px;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 14px 18px;
+            margin: 8px 0;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            color: #fff;
+            font-size: 1rem;
+            transition: 0.3s;
+            outline: none;
+        }
+        .login-box input:focus {
+            border-color: var(--neon);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .login-box input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .login-box .row {
+            display: flex;
+            gap: 12px;
+            margin: 12px 0;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .login-box .row label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .login-box .row input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            accent-color: var(--neon);
+        }
+
+        .login-box .avatar-grid {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 12px 0;
+            flex-wrap: wrap;
+        }
+        .login-box .avatar-grid .av {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            background: #1a1a3a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .login-box .avatar-grid .av:hover {
+            border-color: var(--neon);
+            transform: scale(1.1);
+        }
+        .login-box .avatar-grid .av.selected {
+            border-color: var(--gold);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0 6px;
+            border: none;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, var(--neon), #0088ff);
+            color: #000;
+            cursor: pointer;
+            transition: 0.3s;
+            letter-spacing: 2px;
+        }
+        .login-box button:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+        }
+        .login-box .switch {
+            background: transparent;
+            color: var(--neon);
+            font-size: 0.85rem;
+            padding: 6px;
+            width: auto;
+            margin: 4px auto;
+            letter-spacing: 1px;
+        }
+        .login-box .switch:hover {
+            background: rgba(0, 255, 255, 0.05);
+            transform: none;
+            box-shadow: none;
+        }
+        .login-box .daily-reward {
+            margin: 12px 0;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.08);
+            border-radius: 16px;
+            border: 1px dashed var(--gold);
+            font-size: 0.9rem;
+            color: var(--gold);
+        }
+
+        /* ===== GAME UI OVERLAY ===== */
+        #gameUI {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 100;
+        }
+        #gameUI>* {
+            pointer-events: auto;
+        }
+
+        /* Top HUD */
+        #topHUD {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 16px 24px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent);
+        }
+        #topHUD .left {
+            display: flex;
+            gap: 18px;
+            align-items: center;
+        }
+        #topHUD .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 140px;
+        }
+        #topHUD .stats .bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #topHUD .stats .bar-wrap label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            width: 24px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        #topHUD .stats .bar {
+            height: 10px;
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        #topHUD .stats .bar .fill {
+            height: 100%;
+            width: 100%;
+            border-radius: 20px;
+            transition: width 0.25s;
+        }
+        #topHUD .stats .bar .fill.hp {
+            background: var(--hp);
+        }
+        #topHUD .stats .bar .fill.mp {
+            background: var(--mp);
+        }
+        #topHUD .stats .bar .fill.st {
+            background: var(--st);
+        }
+        #topHUD .stats .bar .fill.xp {
+            background: var(--xp);
+        }
+
+        #topHUD .right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        #topHUD .right button {
+            background: var(--glass);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+            pointer-events: auto;
+        }
+        #topHUD .right button:hover {
+            border-color: var(--neon);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+        }
+        #topHUD .right .coin {
+            color: var(--gold);
+            font-weight: 700;
+        }
+        #topHUD .right .gem {
+            color: var(--neon2);
+            font-weight: 700;
+        }
+
+        /* Quick bar */
+        #quickBar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            padding: 10px 16px;
+            border-radius: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        #quickBar .slot {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: 0.2s;
+            color: rgba(255, 255, 255, 0.3);
+        }
+        #quickBar .slot.active {
+            border-color: var(--neon);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            background: rgba(0, 255, 255, 0.08);
+            color: #fff;
+        }
+        #quickBar .slot .key {
+            position: absolute;
+            top: 2px;
+            right: 6px;
+            font-size: 0.5rem;
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Minimap */
+        #minimap {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            width: 140px;
+            height: 140px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+            backdrop-filter: blur(4px);
+        }
+        #minimap canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Quest log (toggle) */
+        #questLog {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 260px;
+            max-height: 50vh;
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            border-radius: 20px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            overflow-y: auto;
+            display: none;
+            pointer-events: auto;
+        }
+        #questLog.open {
+            display: block;
+        }
+        #questLog h3 {
+            font-family: 'Orbitron', monospace;
+            font-size: 0.9rem;
+            color: var(--neon);
+            margin-bottom: 12px;
+        }
+        #questLog .q-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 0.8rem;
+        }
+        #questLog .q-item .title {
+            font-weight: 600;
+        }
+        #questLog .q-item .desc {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.7rem;
+        }
+        #questLog .q-item .progress {
+            color: var(--gold);
+            font-size: 0.7rem;
+        }
+
+        /* Notifications */
+        #notifications {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        #notifications .note {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            padding: 10px 28px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.9rem;
+            animation: slideDown 0.4s ease;
+            pointer-events: auto;
+        }
+        @keyframes slideDown {
+            0% {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Settings panel */
+        #settingsPanel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            display: none;
+            pointer-events: auto;
+            z-index: 200;
+        }
+        #settingsPanel.open {
+            display: block;
+        }
+        #settingsPanel h2 {
+            font-family: 'Orbitron', monospace;
+            color: var(--neon);
+            margin-bottom: 20px;
+        }
+        #settingsPanel label {
+            display: block;
+            margin: 12px 0 4px;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        #settingsPanel input[type="range"] {
+            width: 100%;
+            accent-color: var(--neon);
+        }
+        #settingsPanel button {
+            margin-top: 20px;
+            padding: 10px 30px;
+            border: none;
+            border-radius: 30px;
+            background: var(--neon);
+            color: #000;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* ===== CANVAS (GAME WORLD) ===== */
+        #gameCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #1a2a3a;
+            z-index: 1;
+            cursor: crosshair;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 640px) {
+            .login-box {
+                padding: 24px 16px;
+            }
+            .login-box .logo {
+                font-size: 2.2rem;
+            }
+            #topHUD {
+                flex-direction: column;
+                gap: 8px;
+                padding: 10px;
+            }
+            #topHUD .left {
+                flex-wrap: wrap;
+            }
+            #topHUD .stats {
+                min-width: 100px;
+            }
+            #quickBar .slot {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+            #minimap {
+                width: 90px;
+                height: 90px;
+                bottom: 80px;
+                right: 10px;
+            }
+            #questLog {
+                width: 200px;
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== LOADING ===== -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>LOADING P‑BOX</p>
+    </div>
+
+    <!-- ===== LOGIN OVERLAY ===== -->
+    <div id="loginOverlay">
+        <canvas id="loginBgCanvas"></canvas>
+        <div class="login-box">
+            <div class="logo">P‑BOX</div>
+            <div class="subtitle">MMORPG</div>
+
+            <div id="loginForm">
+                <input type="text" id="loginUser" placeholder="Username" />
+                <input type="password" id="loginPass" placeholder="Password" />
+                <div class="row">
+                    <label><input type="checkbox" id="rememberMe" /> Remember Me</label>
+                    <label style="margin-left:auto;color:var(--neon);cursor:pointer;" onclick="alert('Reset link sent to your email (demo).')">Forgot?</label>
+                </div>
+                <button onclick="handleLogin()">⚡ LOGIN</button>
+                <button class="switch" onclick="showRegister()">Create account</button>
+                <div class="daily-reward">🎁 Daily reward: 50 coins + 5 gems (claim on login)</div>
+            </div>
+
+            <div id="registerForm" style="display:none;">
+                <input type="text" id="regUser" placeholder="Choose username" />
+                <input type="password" id="regPass" placeholder="Password" />
+                <input type="password" id="regPass2" placeholder="Confirm password" />
+                <div class="avatar-grid" id="avatarGrid">
+                    <div class="av selected" data-av="🧝">🧝</div>
+                    <div class="av" data-av="🧙">🧙</div>
+                    <div class="av" data-av="🦸">🦸</div>
+                    <div class="av" data-av="🧛">🧛</div>
+                    <div class="av" data-av="🤖">🤖</div>
+                    <div class="av" data-av="👹">👹</div>
+                </div>
+                <button onclick="handleRegister()">✨ CREATE</button>
+                <button class="switch" onclick="showLogin()">Back to login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== GAME UI ===== -->
+    <div id="gameUI" style="display:none;">
+        <!-- Top HUD -->
+        <div id="topHUD">
+            <div class="left">
+                <div style="font-family:'Orbitron';font-size:1.2rem;color:var(--neon);">P‑BOX</div>
+                <div class="stats">
+                    <div class="bar-wrap"><label>HP</label><div class="bar"><div class="fill hp" id="hpBar" style="width:100%"></div></div></div>
+                    <div class="bar-wrap"><label>MP</label><div class="bar"><div class="fill mp" id="mpBar" style="width:100%"></div></div></div>
+                    <div class="bar-wrap"><label>ST</label><div class="bar"><div class="fill st" id="stBar" style="width:100%"></div></div></div>
+                    <div class="bar-wrap"><label>XP</label><div class="bar"><div class="fill xp" id="xpBar" style="width:0%"></div></div></div>
+                </div>
+                <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">Lv.<span id="levelDisplay">1</span></div>
+            </div>
+            <div class="right">
+                <span class="coin">🪙 <span id="coinDisplay">100</span></span>
+                <span class="gem">💎 <span id="gemDisplay">10</span></span>
+                <button onclick="toggleQuestLog()">📜 Quests</button>
+                <button onclick="toggleSettings()">⚙️</button>
+                <button onclick="saveGame()">💾 Save</button>
+                <button onclick="logout()">🚪</button>
+            </div>
+        </div>
+
+        <!-- Minimap -->
+        <div id="minimap"><canvas id="minimapCanvas" width="140" height="140"></canvas></div>
+
+        <!-- Quest Log -->
+        <div id="questLog"><h3>📜 QUESTS</h3><div id="questList"></div></div>
+
+        <!-- Quick Bar -->
+        <div id="quickBar">
+            <div class="slot active" data-slot="0"><span>🗡️</span><span class="key">1</span></div>
+            <div class="slot" data-slot="1"><span>🏹</span><span class="key">2</span></div>
+            <div class="slot" data-slot="2"><span>🔥</span><span class="key">3</span></div>
+            <div class="slot" data-slot="3"><span>🧪</span><span class="key">4</span></div>
+            <div class="slot" data-slot="4"><span>🍞</span><span class="key">5</span></div>
+            <div class="slot" data-slot="5"><span>⚡</span><span class="key">6</span></div>
+            <div class="slot" data-slot="6"><span>🛡️</span><span class="key">7</span></div>
+            <div class="slot" data-slot="7"><span>💊</span><span class="key">8</span></div>
+            <div class="slot" data-slot="8"><span>📦</span><span class="key">9</span></div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notifications"></div>
+
+        <!-- Settings -->
+        <div id="settingsPanel">
+            <h2>⚙️ SETTINGS</h2>
+            <label>Zoom</label>
+            <input type="range" id="zoomSlider" min="0.5" max="2.0" step="0.05" value="1.0" />
+            <label>Volume</label>
+            <input type="range" id="volSlider" min="0" max="1" step="0.05" value="0.5" />
+            <button onclick="closeSettings()">Close</button>
+        </div>
+    </div>
+
+    <!-- ===== GAME CANVAS ===== -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- =============================== -->
+    <!-- ===== JAVASCRIPT ENGINE ===== -->
+    <!-- =============================== -->
+    <script>
+        // ============================================================
+        //  P‑BOX  –  FULL MMORPG ENGINE  (Single-file build)
+        //  Includes: login, world, player, combat, npc, quests, weather
+        // ============================================================
+
+        // ========== 1. LOADING SCREEN ==========
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+                initLoginBg();
+            }, 1200);
+        });
+
+        // ========== 2. LOGIN BACKGROUND ==========
+        function initLoginBg() {
+            const c = document.getElementById('loginBgCanvas');
+            const ctx = c.getContext('2d');
+            let w, h;
+            const particles = [];
+            const count = 80;
+
+            function resize() {
+                w = c.width = window.innerWidth;
+                h = c.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    r: Math.random() * 2 + 0.5,
+                    dx: (Math.random() - 0.5) * 0.6,
+                    dy: (Math.random() - 0.5) * 0.6,
+                    color: `hsla(${Math.random()*60+180}, 80%, 60%, ${Math.random()*0.5+0.2})`
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                for (const p of particles) {
+                    p.x += p.dx;
+                    p.y += p.dy;
+                    if (p.x < 0 || p.x > w) p.dx *= -1;
+                    if (p.y < 0 || p.y > h) p.dy *= -1;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                }
+                // connecting lines
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 120) {
+                            ctx.beginPath();
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.strokeStyle = `rgba(0,255,255,${0.08*(1-dist/120)})`;
+                            ctx.lineWidth = 0.6;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        // ========== 3. AUTH SYSTEM ==========
+        let currentUser = null;
+        let selectedAvatar = '🧝';
+
+        // Avatar selection
+        document.querySelectorAll('#avatarGrid .av').forEach(el => {
+            el.addEventListener('click', function() {
+                document.querySelectorAll('#avatarGrid .av').forEach(a => a.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedAvatar = this.dataset.av;
+            });
+        });
+
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+        }
+
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+        }
+
+        function handleLogin() {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            if (!user || !pass) { alert('Enter username and password.'); return; }
+            const data = localStorage.getItem('pbox_user_' + user);
+            if (!data) { alert('User not found. Register first.'); return; }
+            const parsed = JSON.parse(data);
+            if (parsed.pass !== pass) { alert('Wrong password.'); return; }
+            currentUser = user;
+            document.getElementById('loginOverlay').classList.add('hidden');
+            document.getElementById('gameUI').style.display = 'block';
+            startGame(parsed);
+            notify('Welcome back, ' + user + '!');
+            // daily reward
+            const last = localStorage.getItem('pbox_daily_' + user);
+            const today = new Date().toDateString();
+            if (last !== today) {
+                parsed.coins = (parsed.coins || 100) + 50;
+                parsed.gems = (parsed.gems || 10) + 5;
+                localStorage.setItem('pbox_user_' + user, JSON.stringify(parsed));
+                localStorage.setItem('pbox_daily_' + user, today);
+                notify('🎁 Daily reward claimed! +50 coins, +5 gems');
+                updateHUD(parsed);
+            }
+        }
+
+        function handleRegister() {
+            const user = document.getElementById('regUser').value.trim();
+            const pass = document.getElementById('regPass').value.trim();
+            const pass2 = document.getElementById('regPass2').value.trim();
+            if (!user || !pass || !pass2) { alert('Fill all fields.'); return; }
+            if (pass !== pass2) { alert('Passwords do not match.'); return; }
+            if (localStorage.getItem('pbox_user_' + user)) { alert('Username already exists.'); return; }
+            const data = {
+                pass: pass,
+                avatar: selectedAvatar,
+                coins: 100,
+                gems: 10,
+                level: 1,
+                xp: 0,
+                hp: 100,
+                maxHp: 100,
+                mp: 50,
+                maxMp: 50,
+                stamina: 100,
+                maxStamina: 100,
+                equipment: { head: null, chest: null, legs: null, weapon: '🗡️' },
+                inventory: ['🗡️', '🍞', '🧪'],
+                quests: [{ id: 'main', title: 'The First Step', desc: 'Kill 3 slimes', progress: 0, target: 3,
+                    done: false }],
+                stats: { kills: 0, deaths: 0 }
+            };
+            localStorage.setItem('pbox_user_' + user, JSON.stringify(data));
+            alert('Account created! Login now.');
+            showLogin();
+            document.getElementById('loginUser').value = user;
+        }
+
+        function logout() {
+            if (confirm('Save and logout?')) { saveGame();
+                location.reload(); }
+        }
+
+        // ========== 4. GAME STATE ==========
+        let G = {
+            player: null,
+            entities: [],
+            chunks: {},
+            camera: { x: 0, y: 0, zoom: 1 },
+            keys: {},
+            mouse: { x: 0, y: 0, down: false },
+            time: 0,
+            dt: 0,
+            weather: 'clear',
+            weatherTimer: 0,
+            particles: [],
+            projectiles: [],
+            damageNumbers: [],
+            loot: [],
+            dayNight: 0, // 0-1
+            gameStarted: false,
+            saveTimer: 0,
+            currentSlot: 0,
+        };
+
+        // ========== 5. PLAYER CLASS ==========
+        class Player {
+            constructor(data) {
+                this.x = 400;
+                this.y = 300;
+                this.w = 28;
+                this.h = 40;
+                this.vx = 0;
+                this.vy = 0;
+                this.speed = 140;
+                this.runSpeed = 260;
+                this.sprintSpeed = 380;
+                this.facing = 0; // 0=down,1=up,2=left,3=right
+                this.health = data.hp || 100;
+                this.maxHealth = data.maxHp || 100;
+                this.mana = data.mp || 50;
+                this.maxMana = data.maxMp || 50;
+                this.stamina = data.stamina || 100;
+                this.maxStamina = data.maxStamina || 100;
+                this.level = data.level || 1;
+                this.xp = data.xp || 0;
+                this.xpNext = this.level * 20 + 10;
+                this.coins = data.coins || 100;
+                this.gems = data.gems || 10;
+                this.equipment = data.equipment || { head: null, chest: null, legs: null, weapon: '🗡️' };
+                this.inventory = data.inventory || ['🗡️', '🍞', '🧪'];
+                this.quests = data.quests || [];
+                this.stats = data.stats || { kills: 0, deaths: 0 };
+                this.avatar = data.avatar || '🧝';
+                this.attackCooldown = 0;
+                this.attackTimer = 0;
+                this.isAttacking = false;
+                this.comboCount = 0;
+                this.rolling = false;
+                this.rollTimer = 0;
+                this.staminaRegen = 8;
+                this.healthRegen = 0.5;
+                this.manaRegen = 0.8;
+                this.grounded = false;
+                this.jumpPower = -320;
+                this.gravity = 700;
+                this.onGround = false;
+            }
+
+            get speedMult() {
+                if (this.rolling) return 1.8;
+                if (G.keys['ShiftLeft'] || G.keys['ShiftRight']) {
+                    if (this.stamina > 5) return this.sprintSpeed / this.speed;
+                    return this.runSpeed / this.speed;
+                }
+                if (G.keys['KeyW'] || G.keys['KeyA'] || G.keys['KeyS'] || G.keys['KeyD']) {
+                    if (G.keys['ControlLeft'] || G.keys['ControlRight']) return this.runSpeed / this.speed;
+                }
+                return 1;
+            }
+
+            update(dt) {
+                // Regens
+                this.stamina = Math.min(this.maxStamina, this.stamina + this.staminaRegen * dt);
+                this.health = Math.min(this.maxHealth, this.health + this.healthRegen * dt);
+                this.mana = Math.min(this.maxMana, this.mana + this.manaRegen * dt);
+
+                // Stamina drain for sprint
+                if (G.keys['ShiftLeft'] || G.keys['ShiftRight']) {
+                    if (this.stamina > 0) this.stamina -= 20 * dt;
+                    if (this.stamina < 0) this.stamina = 0;
+                }
+
+                // Rolling
+                if (this.rolling) {
+                    this.rollTimer -= dt;
+                    if (this.rollTimer <= 0) this.rolling = false;
+                }
+
+                // Attack cooldown
+                if (this.attackCooldown > 0) this.attackCooldown -= dt;
+                if (this.attackTimer > 0) this.attackTimer -= dt;
+                else this.isAttacking = false;
+
+                // Movement
+                let dx = 0,
+                    dy = 0;
+                if (G.keys['KeyW'] || G.keys['ArrowUp']) dy = -1;
+                if (G.keys['KeyS'] || G.keys['ArrowDown']) dy = 1;
+                if (G.keys['KeyA'] || G.keys['ArrowLeft']) dx = -1;
+                if (G.keys['KeyD'] || G.keys['ArrowRight']) dx = 1;
+
+                if (dx !== 0 && dy !== 0) {
+                    dx *= 0.707;
+                    dy *= 0.707;
+                }
+
+                const spd = this.speed * this.speedMult;
+                this.vx = dx * spd;
+                this.vy = dy * spd;
+
+                // Facing
+                if (dx > 0) this.facing = 3;
+                else if (dx < 0) this.facing = 2;
+                else if (dy < 0) this.facing = 1;
+                else if (dy > 0) this.facing = 0;
+
+                // Apply
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                // World bounds (will be expanded)
+                this.x = Math.max(20, Math.min(3000, this.x));
+                this.y = Math.max(20, Math.min(3000, this.y));
+
+                // XP to level
+                if (this.xp >= this.xpNext) {
+                    this.xp -= this.xpNext;
+                    this.level++;
+                    this.xpNext = this.level * 20 + 10;
+                    this.maxHealth += 10;
+                    this.health = this.maxHealth;
+                    this.maxMana += 5;
+                    this.mana = this.maxMana;
+                    notify('🎉 Level up! You are now level ' + this.level);
+                }
+            }
+
+            attack() {
+                if (this.attackCooldown > 0 || this.isAttacking) return;
+                this.isAttacking = true;
+                this.attackTimer = 0.25;
+                this.attackCooldown = 0.5;
+                this.comboCount = (this.comboCount + 1) % 4;
+                // Damage enemies in front
+                const range = 60;
+                const cx = this.x + (this.facing === 3 ? 20 : this.facing === 2 ? -20 : 0);
+                const cy = this.y + (this.facing === 0 ? 20 : this.facing === 1 ? -20 : 0);
+                const hitbox = { x: cx - 30, y: cy - 30, w: 60, h: 60 };
+                let hit = false;
+                for (const e of G.entities) {
+                    if (e.type === 'enemy' && !e.dead) {
+                        if (rectIntersect(hitbox, { x: e.x - 16, y: e.y - 16, w: 32, h: 32 })) {
+                            const dmg = 15 + Math.floor(Math.random() * 10);
+                            const crit = Math.random() < 0.15;
+                            const final = crit ? dmg * 2 : dmg;
+                            e.health -= final;
+                            spawnDamageNumber(e.x, e.y - 20, final, crit);
+                            if (e.health <= 0) {
+                                e.dead = true;
+                                this.stats.kills++;
+                                this.xp += 20 + Math.floor(Math.random() * 15);
+                                spawnLoot(e.x, e.y, e.lootTable);
+                                notify('💀 ' + e.name + ' killed!');
+                                checkQuestProgress('kill', e.name);
+                            }
+                            hit = true;
+                            break;
+                        }
+                    }
+                }
+                if (!hit) {
+                    // swing miss
+                }
+                // spawn swing particles
+                for (let i = 0; i < 8; i++) {
+                    spawnParticle(cx + (Math.random() - 0.5) * 40, cy + (Math.random() - 0.5) * 40, '#0ff', 4, 0.3);
+                }
+            }
+
+            takeDamage(dmg) {
+                this.health -= dmg;
+                spawnDamageNumber(this.x, this.y - 40, dmg, false);
+                if (this.health <= 0) {
+                    this.health = this.maxHealth * 0.3;
+                    this.stats.deaths++;
+                    notify('💀 You died! Respawned.');
+                }
+            }
+        }
+
+        // ========== 6. ENTITY CLASSES ==========
+        class Enemy {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.dead = false;
+                this.health = 30;
+                this.maxHealth = 30;
+                this.speed = 40 + Math.random() * 30;
+                this.attackCooldown = 0;
+                this.state = 'idle';
+                this.stateTimer = 0;
+                this.targetX = x;
+                this.targetY = y;
+                this.name = type === 'slime' ? 'Slime' : 'Skeleton';
+                this.lootTable = [{ item: '🪙', chance: 0.5, amount: 5 }, { item: '🧪', chance: 0.2, amount: 1 }];
+                if (type === 'skeleton') {
+                    this.health = 45;
+                    this.maxHealth = 45;
+                    this.speed = 60;
+                    this.name = 'Skeleton';
+                }
+                if (type === 'boss') {
+                    this.health = 200;
+                    this.maxHealth = 200;
+                    this.speed = 30;
+                    this.name = '👑 BOSS Golem';
+                    this.lootTable = [{ item: '💎', chance: 1, amount: 10 }, { item: '⚔️', chance: 0.3, amount: 1 }];
+                    this.phase = 1;
+                }
+            }
+
+            update(dt) {
+                if (this.dead) return;
+                if (this.health <= 0) { this.dead = true; return; }
+
+                // Boss phases
+                if (this.type === 'boss' && this.health < this.maxHealth * 0.5 && this.phase === 1) {
+                    this.phase = 2;
+                    this.speed = 60;
+                    notify('👑 BOSS enrages! Phase 2');
+                }
+
+                this.stateTimer -= dt;
+                if (this.stateTimer <= 0) {
+                    this.state = Math.random() > 0.6 ? 'attack' : 'patrol';
+                    this.stateTimer = 2 + Math.random() * 3;
+                    if (this.state === 'patrol') {
+                        this.targetX = this.x + (Math.random() - 0.5) * 200;
+                        this.targetY = this.y + (Math.random() - 0.5) * 200;
+                    }
+                }
+
+                // AI: chase player if close
+                const p = G.player;
+                if (p) {
+                    const dx = p.x - this.x;
+                    const dy = p.y - this.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 300) {
+                        this.state = 'attack';
+                        this.targetX = p.x;
+                        this.targetY = p.y;
+                    }
+                    if (dist < 40 && this.attackCooldown <= 0) {
+                        p.takeDamage(10 + Math.floor(Math.random() * 10));
+                        this.attackCooldown = 1.2;
+                        spawnParticle(p.x, p.y, '#ff3355', 10, 0.4);
+                    }
+                }
+
+                // Move to target
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 5) {
+                    const move = Math.min(this.speed * dt, dist);
+                    this.x += (dx / dist) * move;
+                    this.y += (dy / dist) * move;
+                }
+
+                if (this.attackCooldown > 0) this.attackCooldown -= dt;
+            }
+
+            draw(ctx, cam) {
+                if (this.dead) return;
+                const sx = this.x - cam.x;
+                const sy = this.y - cam.y;
+                // Body
+                ctx.save();
+                ctx.translate(sx, sy);
+                if (this.type === 'slime') {
+                    ctx.fillStyle = '#44dd88';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 4, 18, 14, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#228844';
+                    ctx.beginPath();
+                    ctx.arc(0, -2, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(-5, -6, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(5, -6, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#111';
+                    ctx.beginPath();
+                    ctx.arc(-5, -4, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(5, -4, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'skeleton') {
+                    ctx.fillStyle = '#ddd';
+                    ctx.fillRect(-8, -18, 6, 14);
+                    ctx.fillRect(2, -18, 6, 14);
+                    ctx.beginPath();
+                    ctx.arc(0, -20, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#111';
+                    ctx.beginPath();
+                    ctx.arc(-5, -22, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(5, -22, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'boss') {
+                    ctx.fillStyle = '#aa44ff';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 32, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ff44aa';
+                    ctx.beginPath();
+                    ctx.arc(-10, -8, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(10, -8, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(-14, -14, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(14, -14, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = '14px sans-serif';
+                    ctx.fillText('👑', -12, 8);
+                    // health bar
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(-36, -46, 72, 8);
+                    ctx.fillStyle = '#ff3355';
+                    ctx.fillRect(-36, -46, 72 * (this.health / this.maxHealth), 8);
+                }
+                ctx.restore();
+                // name
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.name, sx, sy - 40);
+            }
+        }
+
+        // ========== 7. NPC CLASS ==========
+        class NPC {
+            constructor(x, y, name, dialogues) {
+                this.x = x;
+                this.y = y;
+                this.name = name;
+                this.dialogues = dialogues;
+                this.schedule = 'idle';
+                this.timer = 0;
+                this.angle = 0;
+            }
+            update(dt) {
+                this.timer += dt;
+                this.angle += dt * 0.5;
+                // simple wandering
+                this.x += Math.sin(this.timer * 0.3) * 0.2;
+                this.y += Math.cos(this.timer * 0.2) * 0.2;
+            }
+            draw(ctx, cam) {
+                const sx = this.x - cam.x;
+                const sy = this.y - cam.y;
+                ctx.fillStyle = '#88ccff';
+                ctx.beginPath();
+                ctx.arc(sx, sy, 18, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('🧑‍🌾', sx, sy + 6);
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(this.name, sx, sy + 34);
+                // dialogue bubble if close
+                const p = G.player;
+                if (p) {
+                    const dx = p.x - this.x;
+                    const dy = p.y - this.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < 70) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                        ctx.roundRect ? ctx.roundRect(sx - 50, sy - 50, 100, 24, 8) : 0;
+                        ctx.fill();
+                        ctx.fillStyle = '#fff';
+                        ctx.font = '11px sans-serif';
+                        ctx.fillText(this.dialogues[Math.floor(Math.random() * this.dialogues.length)], sx, sy -
+                        34);
+                    }
+                }
+            }
+        }
+
+        // ========== 8. WORLD GENERATION ==========
+        function generateWorld() {
+            const world = [];
+            const size = 3000;
+            const tileSize = 40;
+            const cols = Math.ceil(size / tileSize);
+            const rows = Math.ceil(size / tileSize);
+            for (let i = 0; i < cols; i++) {
+                world[i] = [];
+                for (let j = 0; j < rows; j++) {
+                    let type = 'grass';
+                    const noise = Math.sin(i * 0.05) * Math.cos(j * 0.07) + Math.sin(i * 0.1 + j * 0.08) * 0.5;
+                    if (noise > 0.6) type = 'tree';
+                    else if (noise < -0.4) type = 'water';
+                    else if (noise > 0.3 && noise < 0.35) type = 'stone';
+                    // houses / structures
+                    if (i > 20 && i < 28 && j > 18 && j < 22) type = 'house';
+                    if (i > 50 && i < 55 && j > 50 && j < 55) type = 'dungeon';
+                    if (i > 70 && i < 74 && j > 30 && j < 34) type = 'village';
+                    world[i][j] = type;
+                }
+            }
+            return { world, cols, rows, tileSize };
+        }
+
+        // ========== 9. RENDERER ==========
+        function render() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const cam = G.camera;
+            const p = G.player;
+            if (!p) return;
+
+            // Camera follow + smoothing
+            const targetX = p.x - w / (2 * cam.zoom);
+            const targetY = p.y - h / (2 * cam.zoom);
+            cam.x += (targetX - cam.x) * 0.08;
+            cam.y += (targetY - cam.y) * 0.08;
+
+            ctx.save();
+            ctx.translate(w / 2, h / 2);
+            ctx.scale(cam.zoom, cam.zoom);
+            ctx.translate(-cam.x, -cam.y);
+
+            // ---- Draw world ----
+            const world = G.worldData;
+            if (world) {
+                const { world: grid, cols, rows, tileSize } = world;
+                const startCol = Math.max(0, Math.floor((cam.x) / tileSize) - 2);
+                const endCol = Math.min(cols, Math.floor((cam.x + w / cam.zoom) / tileSize) + 3);
+                const startRow = Math.max(0, Math.floor((cam.y) / tileSize) - 2);
+                const endRow = Math.min(rows, Math.floor((cam.y + h / cam.zoom) / tileSize) + 3);
+
+                for (let i = startCol; i < endCol; i++) {
+                    for (let j = startRow; j < endRow; j++) {
+                        const type = grid[i]?.[j] || 'grass';
+                        const x = i * tileSize;
+                        const y = j * tileSize;
+                        let color = '#3a7a3a';
+                        if (type === 'grass') color = '#4a8a4a';
+                        else if (type === 'tree') color = '#2a6a2a';
+                        else if (type === 'water') color = '#2266aa';
+                        else if (type === 'stone') color = '#888';
+                        else if (type === 'house') color = '#bb8844';
+                        else if (type === 'dungeon') color = '#553333';
+                        else if (type === 'village') color = '#ccaa66';
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x, y, tileSize, tileSize);
+                        if (type === 'tree') {
+                            ctx.fillStyle = '#3a8a3a';
+                            ctx.beginPath();
+                            ctx.arc(x + 20, y + 10, 12, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.fillStyle = '#6a4a2a';
+                            ctx.fillRect(x + 18, y + 18, 4, 16);
+                        }
+                        if (type === 'water') {
+                            ctx.fillStyle = 'rgba(100,200,255,0.2)';
+                            ctx.fillRect(x, y, tileSize, tileSize);
+                        }
+                    }
+                }
+            }
+
+            // ---- Draw entities ----
+            for (const e of G.entities) {
+                if (e.draw) e.draw(ctx, cam);
+            }
+
+            // ---- Draw NPCs ----
+            for (const n of G.npcs) {
+                n.draw(ctx, cam);
+            }
+
+            // ---- Draw player ----
+            if (p) {
+                const sx = p.x - cam.x;
+                const sy = p.y - cam.y;
+                ctx.save();
+                ctx.translate(sx, sy);
+                // Shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(0, 16, 14, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // Body
+                ctx.fillStyle = '#4488ff';
+                ctx.fillRect(-12, -18, 24, 30);
+                ctx.fillStyle = '#66aaff';
+                ctx.fillRect(-10, -24, 20, 10);
+                // Avatar
+                ctx.font = '22px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(p.avatar || '🧝', 0, -8);
+                // Weapon
+                ctx.font = '16px sans-serif';
+                ctx.fillText(p.equipment.weapon || '🗡️', p.facing === 3 ? 16 : p.facing === 2 ? -22 : 0, p.facing ===
+                    0 ? 20 : p.facing === 1 ? -24 : 0);
+                // Attack swing
+                if (p.isAttacking) {
+                    ctx.strokeStyle = 'rgba(255,255,0,0.6)';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 30, -0.5, 0.5);
+                    ctx.stroke();
+                }
+                ctx.restore();
+                // Name + level
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Lv.' + p.level + ' ' + (G.currentUser || 'Player'), sx, sy - 30);
+            }
+
+            // ---- Particles ----
+            for (const pt of G.particles) {
+                pt.x += pt.vx * 0.016;
+                pt.y += pt.vy * 0.016;
+                pt.life -= 0.016;
+                ctx.globalAlpha = pt.life / pt.maxLife;
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x - cam.x, pt.y - cam.y, pt.size * (pt.life / pt.maxLife), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+            G.particles = G.particles.filter(p => p.life > 0);
+
+            // ---- Damage numbers ----
+            for (const dn of G.damageNumbers) {
+                dn.y -= 30 * 0.016;
+                dn.life -= 0.016;
+                ctx.globalAlpha = dn.life / dn.maxLife;
+                ctx.fillStyle = dn.crit ? '#ffdd00' : '#ff3355';
+                ctx.font = 'bold ' + (dn.crit ? 24 : 18) + 'px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(dn.value, dn.x - cam.x, dn.y - cam.y);
+                ctx.globalAlpha = 1;
+            }
+            G.damageNumbers = G.damageNumbers.filter(d => d.life > 0);
+
+            // ---- Loot ----
+            for (const l of G.loot) {
+                ctx.font = '20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(l.icon, l.x - cam.x, l.y - cam.y);
+            }
+
+            ctx.restore();
+
+            // ---- Minimap ----
+            drawMinimap();
+        }
+
+        // ========== 10. MINIMAP ==========
+        function drawMinimap() {
+            const canvas = document.getElementById('minimapCanvas');
+            const ctx = canvas.getContext('2d');
+            const w = 140,
+                h = 140;
+            ctx.clearRect(0, 0, w, h);
+            const p = G.player;
+            if (!p) return;
+            const scale = 0.04;
+            const cx = w / 2 - p.x * scale;
+            const cy = h / 2 - p.y * scale;
+            // Draw world dots
+            if (G.worldData) {
+                const grid = G.worldData.world;
+                for (let i = 0; i < grid.length; i += 2) {
+                    for (let j = 0; j < grid[0].length; j += 2) {
+                        const type = grid[i]?.[j];
+                        if (type) {
+                            ctx.fillStyle = type === 'water' ? '#3388cc' : type === 'tree' ? '#2a6a2a' : '#4a8a4a';
+                            ctx.fillRect(i * 2 * scale + cx, j * 2 * scale + cy, 1.5, 1.5);
+                        }
+                    }
+                }
+            }
+            // Entities
+            for (const e of G.entities) {
+                if (!e.dead) {
+                    ctx.fillStyle = '#ff4444';
+                    ctx.fillRect(e.x * scale + cx - 1, e.y * scale + cy - 1, 3, 3);
+                }
+            }
+            // Player
+            ctx.fillStyle = '#00ffaa';
+            ctx.beginPath();
+            ctx.arc(w / 2, h / 2, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,255,170,0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, 0, w, h);
+        }
+
+        // ========== 11. HELPERS ==========
+        function rectIntersect(a, b) {
+            return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+        }
+
+        function spawnParticle(x, y, color, count, life) {
+            for (let i = 0; i < count; i++) {
+                G.particles.push({
+                    x,
+                    y,
+                    vx: (Math.random() - 0.5) * 120,
+                    vy: (Math.random() - 0.5) * 120 - 30,
+                    color,
+                    size: 2 + Math.random() * 4,
+                    life: life || 0.6,
+                    maxLife: life || 0.6,
+                });
+            }
+        }
+
+        function spawnDamageNumber(x, y, value, crit) {
+            G.damageNumbers.push({ x, y, value: '-' + value, crit, life: 0.8, maxLife: 0.8 });
+        }
+
+        function spawnLoot(x, y, table) {
+            for (const item of table) {
+                if (Math.random() < item.chance) {
+                    G.loot.push({ x: x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 40, icon: item
+                        .item, amount: item.amount || 1 });
+                }
+            }
+            // collect nearby loot automatically (simple)
+            setTimeout(() => {
+                for (const l of G.loot) {
+                    const p = G.player;
+                    if (p) {
+                        const dx = p.x - l.x;
+                        const dy = p.y - l.y;
+                        if (Math.sqrt(dx * dx + dy * dy) < 50) {
+                            if (l.icon === '🪙') p.coins += l.amount;
+                            else if (l.icon === '💎') p.gems += l.amount;
+                            else if (l.icon === '🧪') p.inventory.push('🧪');
+                            else if (l.icon === '⚔️') p.inventory.push('⚔️');
+                            notify('📦 Collected ' + l.icon + ' x' + l.amount);
+                            l.collected = true;
+                        }
+                    }
+                }
+                G.loot = G.loot.filter(l => !l.collected);
+            }, 100);
+        }
+
+        function notify(msg) {
+            const container = document.getElementById('notifications');
+            const el = document.createElement('div');
+            el.className = 'note';
+            el.textContent = msg;
+            container.appendChild(el);
+            setTimeout(() => { el.remove(); }, 3000);
+        }
+
+        function updateHUD(data) {
+            const p = G.player;
+            if (!p) return;
+            document.getElementById('hpBar').style.width = (p.health / p.maxHealth * 100) + '%';
+            document.getElementById('mpBar').style.width = (p.mana / p.maxMana * 100) + '%';
+            document.getElementById('stBar').style.width = (p.stamina / p.maxStamina * 100) + '%';
+            document.getElementById('xpBar').style.width = (p.xp / p.xpNext * 100) + '%';
+            document.getElementById('levelDisplay').textContent = p.level;
+            document.getElementById('coinDisplay').textContent = p.coins;
+            document.getElementById('gemDisplay').textContent = p.gems;
+        }
+
+        // ========== 12. QUEST SYSTEM ==========
+        function checkQuestProgress(action, target) {
+            const p = G.player;
+            if (!p) return;
+            for (const q of p.quests) {
+                if (q.done) continue;
+                if (q.id === 'main' && action === 'kill' && target === 'Slime') {
+                    q.progress++;
+                    if (q.progress >= q.target) {
+                        q.done = true;
+                        p.xp += 50;
+                        p.coins += 30;
+                        notify('✅ Quest complete: ' + q.title + '! +50 XP, +30 coins');
+                        // add next quest
+                        p.quests.push({ id: 'main2', title: 'To the Dungeon', desc: 'Find the dungeon entrance',
+                            progress: 0, target: 1, done: false });
+                    }
+                }
+            }
+            updateQuestLog();
+        }
+
+        function updateQuestLog() {
+            const p = G.player;
+            if (!p) return;
+            const list = document.getElementById('questList');
+            list.innerHTML = '';
+            for (const q of p.quests) {
+                const div = document.createElement('div');
+                div.className = 'q-item';
+                div.innerHTML = `
+              <div class="title">${q.done ? '✅' : '◻️'} ${q.title}</div>
+              <div class="desc">${q.desc}</div>
+              <div class="progress">${q.done ? 'Complete' : q.progress + '/' + q.target}</div>
+            `;
+                list.appendChild(div);
+            }
+        }
+
+        function toggleQuestLog() {
+            const el = document.getElementById('questLog');
+            el.classList.toggle('open');
+            if (el.classList.contains('open')) updateQuestLog();
+        }
+
+        // ========== 13. SETTINGS ==========
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('open');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsPanel').classList.remove('open');
+        }
+        document.getElementById('zoomSlider').addEventListener('input', function() {
+            G.camera.zoom = parseFloat(this.value);
+        });
+
+        // ========== 14. SAVE / LOAD ==========
+        function saveGame() {
+            if (!G.player || !G.currentUser) return;
+            const p = G.player;
+            const data = {
+                pass: localStorage.getItem('pbox_user_' + G.currentUser) ? JSON.parse(localStorage.getItem(
+                    'pbox_user_' + G.currentUser)).pass : '',
+                avatar: p.avatar,
+                coins: p.coins,
+                gems: p.gems,
+                level: p.level,
+                xp: p.xp,
+                hp: p.health,
+                maxHp: p.maxHealth,
+                mp: p.mana,
+                maxMp: p.maxMana,
+                stamina: p.stamina,
+                maxStamina: p.maxStamina,
+                equipment: p.equipment,
+                inventory: p.inventory,
+                quests: p.quests,
+                stats: p.stats,
+            };
+            localStorage.setItem('pbox_user_' + G.currentUser, JSON.stringify(data));
+            notify('💾 Game saved!');
+        }
+
+        function loadGame(user) {
+            const raw = localStorage.getItem('pbox_user_' + user);
+            if (!raw) return null;
+            return JSON.parse(raw);
+        }
+
+        // ========== 15. GAME LOOP ==========
+        let lastTime = 0;
+
+        function gameLoop(time) {
+            const dt = Math.min((time - lastTime) / 1000, 0.05);
+            lastTime = time;
+            G.dt = dt;
+            G.time += dt;
+
+            if (G.gameStarted && G.player) {
+                // Update player
+                G.player.update(dt);
+
+                // Update enemies
+                for (const e of G.entities) {
+                    e.update(dt);
+                }
+                // Remove dead
+                G.entities = G.entities.filter(e => !e.dead || e.type === 'npc');
+
+                // Update NPCs
+                for (const n of G.npcs) n.update(dt);
+
+                // Weather cycle
+                G.weatherTimer += dt;
+                if (G.weatherTimer > 30) {
+                    G.weatherTimer = 0;
+                    const weathers = ['clear', 'rain', 'snow', 'fog'];
+                    G.weather = weathers[Math.floor(Math.random() * weathers.length)];
+                    notify('🌤️ Weather: ' + G.weather);
+                }
+
+                // Day/night
+                G.dayNight += dt * 0.01;
+                if (G.dayNight > 1) G.dayNight -= 1;
+
+                // Auto-save
+                G.saveTimer += dt;
+                if (G.saveTimer > 60) {
+                    G.saveTimer = 0;
+                    saveGame();
+                }
+
+                // HUD
+                updateHUD();
+
+                // Quick bar keys
+                for (let i = 0; i < 9; i++) {
+                    if (G.keys['Digit' + (i + 1)]) {
+                        G.currentSlot = i;
+                        document.querySelectorAll('#quickBar .slot').forEach((el, idx) => {
+                            el.classList.toggle('active', idx === i);
+                        });
+                    }
+                }
+            }
+
+            // Render
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ========== 16. INPUT ==========
+        document.addEventListener('keydown', (e) => {
+            G.keys[e.code] = true;
+            if (e.code === 'Space' && G.player && !G.player.rolling && G.player.stamina > 20) {
+                G.player.rolling = true;
+                G.player.rollTimer = 0.3;
+                G.player.stamina -= 20;
+                notify('💨 Roll!');
+            }
+            if (e.code === 'KeyE' && G.player) {
+                G.player.attack();
+            }
+            if (e.code === 'KeyQ') {
+                toggleQuestLog();
+            }
+            if (e.code === 'KeyI') {
+                notify('📦 Inventory: ' + (G.player ? G.player.inventory.join(', ') : ''));
+            }
+            if (e.code === 'KeyM') {
+                notify('🗺️ Map: World size 3000x3000');
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            G.keys[e.code] = false;
+        });
+        document.addEventListener('mousemove', (e) => {
+            const rect = document.getElementById('gameCanvas').getBoundingClientRect();
+            G.mouse.x = (e.clientX - rect.left) / rect.width * document.getElementById('gameCanvas').width;
+            G.mouse.y = (e.clientY - rect.top) / rect.height * document.getElementById('gameCanvas').height;
+        });
+        document.addEventListener('mousedown', (e) => {
+            G.mouse.down = true;
+            if (G.player) G.player.attack();
+        });
+        document.addEventListener('mouseup', () => { G.mouse.down = false; });
+
+        // Canvas resize
+        function resizeCanvas() {
+            const canvas = document.getElementById('gameCanvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // ========== 17. START GAME ==========
+        function startGame(data) {
+            G.player = new Player(data);
+            G.currentUser = document.getElementById('loginUser').value.trim();
+            G.gameStarted = true;
+
+            // Generate world
+            G.worldData = generateWorld();
+
+            // Spawn entities
+            G.entities = [];
+            for (let i = 0; i < 8; i++) {
+                const type = Math.random() > 0.6 ? 'skeleton' : 'slime';
+                const x = 200 + Math.random() * 2600;
+                const y = 200 + Math.random() * 2600;
+                G.entities.push(new Enemy(x, y, type));
+            }
+            // Boss
+            G.entities.push(new Enemy(1500, 1500, 'boss'));
+
+            // NPCs
+            G.npcs = [
+                new NPC(500, 500, 'Merchant', ['Welcome to P-BOX!', 'I sell rare items.', 'Have you seen the boss?']),
+                new NPC(1200, 800, 'Elder', ['The dungeon lies to the east.', 'Beware the Golem!', 'Collect 3 slime
+                    hearts.']),
+            ];
+
+            // Quests
+            if (!G.player.quests || G.player.quests.length === 0) {
+                G.player.quests = [{ id: 'main', title: 'The First Step', desc: 'Kill 3 slimes', progress: 0,
+                    target: 3, done: false }];
+            }
+            updateQuestLog();
+
+            notify('🌍 Welcome to P-BOX! Press E to attack, Space to roll.');
+            notify('📜 Press Q for quest log, I for inventory.');
+        }
+
+        // ========== 18. INIT ==========
+        // If there's a saved session with remember me
+        const savedUser = localStorage.getItem('pbox_remember');
+        if (savedUser) {
+            const data = loadGame(savedUser);
+            if (data) {
+                document.getElementById('loginUser').value = savedUser;
+                document.getElementById('rememberMe').checked = true;
+                // Auto-login after loading screen
+                setTimeout(() => {
+                    document.getElementById('loginOverlay').classList.add('hidden');
+                    document.getElementById('gameUI').style.display = 'block';
+                    currentUser = savedUser;
+                    startGame(data);
+                }, 1500);
+            }
+        }
+
+        // Remember me toggle
+        document.getElementById('rememberMe').addEventListener('change', function() {
+            if (this.checked) {
+                localStorage.setItem('pbox_remember', document.getElementById('loginUser').value.trim());
+            } else {
+                localStorage.removeItem('pbox_remember');
+            }
+        });
+
+        // Start loop
+        requestAnimationFrame(gameLoop);
+
+        console.log('🚀 P-BOX MMORPG loaded successfully!');
+        console.log('📦 Features: Login, World, Combat, NPCs, Quests, Weather, Minimap, Save/Load.');
+    </script>
+</body>
+</html>
